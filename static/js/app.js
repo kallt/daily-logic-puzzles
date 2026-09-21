@@ -216,8 +216,17 @@ function switchToGame(gameType) {
 // -------------------------------------------------------------
 // Calendar Widget (Testportalen Style)
 // -------------------------------------------------------------
+// Calendar range bounds: July 2026 to September 2026 (current month)
+const MIN_CAL_YEAR = 2026;
+const MIN_CAL_MONTH = 6; // July (0-indexed: 6 = Juli)
+const MAX_CAL_YEAR = 2026;
+const MAX_CAL_MONTH = 8; // September (0-indexed: 8 = September)
+
 function initCalendarControls() {
     el.btnCalPrev.addEventListener("click", () => {
+        if (state.calYear === MIN_CAL_YEAR && state.calMonth <= MIN_CAL_MONTH) {
+            return;
+        }
         state.calMonth--;
         if (state.calMonth < 0) {
             state.calMonth = 11;
@@ -227,6 +236,9 @@ function initCalendarControls() {
     });
 
     el.btnCalNext.addEventListener("click", () => {
+        if (state.calYear === MAX_CAL_YEAR && state.calMonth >= MAX_CAL_MONTH) {
+            return;
+        }
         state.calMonth++;
         if (state.calMonth > 11) {
             state.calMonth = 0;
@@ -269,8 +281,19 @@ function renderCalendar() {
     const gameType = state.activeTab === "leaderboard" ? "sudoku" : state.activeTab;
     const history = getCompletionHistory(gameType);
 
-    el.calMonthPill.textContent = MONTH_NAMES_SV[state.calMonth];
+    // Display Month and Year (e.g. "SEPTEMBER 2026")
+    el.calMonthPill.textContent = `${MONTH_NAMES_SV[state.calMonth]} ${state.calYear}`;
     el.calDaysGrid.innerHTML = "";
+
+    // Lock navigation buttons if at bounds
+    const isAtMin = (state.calYear === MIN_CAL_YEAR && state.calMonth <= MIN_CAL_MONTH);
+    const isAtMax = (state.calYear === MAX_CAL_YEAR && state.calMonth >= MAX_CAL_MONTH);
+
+    el.btnCalPrev.disabled = isAtMin;
+    el.btnCalPrev.classList.toggle("disabled", isAtMin);
+
+    el.btnCalNext.disabled = isAtMax;
+    el.btnCalNext.classList.toggle("disabled", isAtMax);
 
     const year = state.calYear;
     const month = state.calMonth;
@@ -298,7 +321,9 @@ function renderCalendar() {
 
         if (isFuture) {
             cell.classList.add("future");
+            cell.classList.add("locked");
             cell.textContent = day;
+            cell.title = "Låst - Dagens pussel släpps på detta datum";
         } else {
             if (completedData && completedData.completed) {
                 if (completedData.onTime) {
@@ -315,7 +340,7 @@ function renderCalendar() {
                 cell.classList.add("selected-day");
             }
 
-            // Click day to load that puzzle
+            // Click day to load that puzzle and bring it directly into focus
             cell.addEventListener("click", () => {
                 selectDate(cellDateStr);
             });
@@ -343,6 +368,19 @@ function selectDate(dateStr) {
 
     renderCalendar();
     loadPuzzle(state.activeTab, dateStr);
+
+    // Center game board in view smoothly without scrolling friction
+    if (el.gameSection) {
+        el.gameSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    // Trigger brief pulse animation on the active grid wrapper
+    const activeContainer = state.activeTab === "sudoku" ? el.sudokuContainer : el.tectonicContainer;
+    if (activeContainer) {
+        activeContainer.classList.remove("board-pulse");
+        void activeContainer.offsetWidth;
+        activeContainer.classList.add("board-pulse");
+    }
 }
 
 // -------------------------------------------------------------
@@ -453,11 +491,12 @@ function renderTectonicGrid() {
     const cages = g.cages;
     const size = g.gridSize || (gridCages ? gridCages.length : 6);
 
-    // Responsive cell size based on grid dimension
-    let cellSize = 56;
-    if (size === 7) cellSize = 48;
-    else if (size === 8) cellSize = 42;
-    else if (size === 9) cellSize = 38;
+    // Allow board to grow larger with larger grid dimensions:
+    // 6x6: 58px (~350px), 7x7: 56px (~392px), 8x8: 54px (~432px), 9x9: 52px (~468px)
+    let cellSize = 58;
+    if (size === 7) cellSize = 56;
+    else if (size === 8) cellSize = 54;
+    else if (size === 9) cellSize = 52;
 
     el.tectonicGrid.style.setProperty("--grid-size", size);
     el.tectonicGrid.style.setProperty("--cell-size", `${cellSize}px`);
@@ -575,7 +614,12 @@ function handleInputNumber(num) {
         }
         g.currentBoard[row][col] = 0;
     } else {
-        g.currentBoard[row][col] = num;
+        // Toggle delete feature: re-entering the same number deletes it
+        if (num !== 0 && g.currentBoard[row][col] === num) {
+            g.currentBoard[row][col] = 0;
+        } else {
+            g.currentBoard[row][col] = num;
+        }
         if (g.candidates[candKey]) {
             delete g.candidates[candKey];
         }

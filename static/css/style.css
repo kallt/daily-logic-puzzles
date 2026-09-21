@@ -31,18 +31,28 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: var(--bg-main);
+    background-color: #F8FAFC;
+    background-image: 
+        radial-gradient(at 0% 0%, rgba(196, 181, 253, 0.25) 0px, transparent 48%),
+        radial-gradient(at 100% 0%, rgba(186, 230, 253, 0.28) 0px, transparent 45%),
+        radial-gradient(at 50% 100%, rgba(254, 240, 138, 0.22) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(167, 243, 208, 0.25) 0px, transparent 48%);
+    background-attachment: fixed;
     color: var(--text-main);
     line-height: 1.5;
-}
-
-.app-container {
-    max-width: 580px;
-    margin: 0 auto;
-    padding: 24px 16px;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+.app-container {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 24px 20px 48px 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
 }
 
 /* Header */
@@ -106,15 +116,24 @@ body {
 }
 
 /* ====================================================================
+   Layout & Game View Container (Desktop 2-column, Mobile 1-column)
+   ==================================================================== */
+#gameViewContainer {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 28px;
+    align-items: start;
+}
+
+/* ====================================================================
    Calendar Card (Testportalen Style)
    ==================================================================== */
 .calendar-card {
-    background-color: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 18px;
-    margin-bottom: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    background-color: #FFFFFF;
+    border: 1px solid rgba(226, 232, 240, 0.85);
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
 }
 
 .calendar-header {
@@ -144,17 +163,31 @@ body {
 }
 
 .cal-nav-btn {
-    background: transparent;
-    border: none;
+    background: #F1F5F9;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
     font-size: 1rem;
-    color: #64748B;
+    color: #475569;
     cursor: pointer;
-    padding: 2px 6px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-weight: 700;
+    transition: all 0.15s ease;
 }
 
-.cal-nav-btn:hover {
-    color: #1E293B;
+.cal-nav-btn:hover:not(:disabled):not(.disabled) {
+    background-color: #E2E8F0;
+    color: #0F172A;
+}
+
+.cal-nav-btn.disabled,
+.cal-nav-btn:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 .cal-month-pill {
@@ -164,8 +197,9 @@ body {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    padding: 4px 12px;
+    padding: 5px 12px;
     border-radius: 20px;
+    user-select: none;
 }
 
 .calendar-weekdays {
@@ -264,6 +298,15 @@ body {
 .dot-ontime { background-color: #A7F3D0; }
 .dot-retro { background-color: #FEF08A; }
 
+/* Game Section Card */
+.game-section {
+    background-color: #FFFFFF;
+    border: 1px solid rgba(226, 232, 240, 0.85);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+}
+
 /* Status Bar */
 .status-bar {
     display: flex;
@@ -351,31 +394,44 @@ body {
     display: flex;
     justify-content: center;
     margin-bottom: 20px;
+    padding: 6px;
+    overflow-x: auto;
 }
 
 .grid-wrapper {
     background-color: var(--bg-card);
-    padding: 6px;
-    border: 2px solid var(--border-dark);
-    border-radius: 8px;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.06);
+    padding: 8px;
+    border: 2.5px solid #1E293B;
+    border-radius: 14px;
+    box-shadow: 0 10px 24px -5px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+@keyframes boardPulse {
+    0% { transform: scale(0.98); opacity: 0.85; }
+    50% { transform: scale(1.01); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.board-pulse {
+    animation: boardPulse 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Sudoku 9x9 Grid */
 .sudoku-grid {
     display: grid;
-    grid-template-columns: repeat(9, 44px);
-    grid-template-rows: repeat(9, 44px);
-    border: 2px solid var(--border-dark);
+    grid-template-columns: repeat(9, 46px);
+    grid-template-rows: repeat(9, 46px);
+    border: 2.5px solid var(--border-dark);
 }
 
 .sudoku-cell {
-    width: 44px;
-    height: 44px;
+    width: 46px;
+    height: 46px;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 1.25rem;
+    font-size: 1.3rem;
     font-weight: 600;
     border-right: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
@@ -865,23 +921,31 @@ body {
 .hidden { display: none !important; }
 
 /* Responsive */
-@media (max-width: 480px) {
+@media (max-width: 860px) {
+    #gameViewContainer {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    .app-container {
+        padding: 16px 12px 36px 12px;
+    }
+    .game-section {
+        padding: 18px 14px;
+    }
+}
+
+@media (max-width: 520px) {
     .sudoku-grid {
-        grid-template-columns: repeat(9, 36px);
-        grid-template-rows: repeat(9, 36px);
+        grid-template-columns: repeat(9, 35px);
+        grid-template-rows: repeat(9, 35px);
     }
     .sudoku-cell {
-        width: 36px;
-        height: 36px;
-        font-size: 1.1rem;
+        width: 35px;
+        height: 35px;
+        font-size: 1.05rem;
     }
     .tectonic-grid {
-        grid-template-columns: repeat(6, 50px);
-        grid-template-rows: repeat(6, 50px);
-    }
-    .tectonic-cell {
-        width: 50px;
-        height: 50px;
-        font-size: 1.25rem;
+        --cell-size: min(48px, calc((100vw - 64px) / var(--grid-size, 6))) !important;
     }
 }
