@@ -5,7 +5,7 @@ Flask REST API and server serving interactive Sudoku and Tectonic challenges.
 
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime
-from database.db import init_db, get_or_create_daily_puzzle, submit_leaderboard_score, get_leaderboard_entries
+from database.db import init_db, get_or_create_daily_puzzle, submit_leaderboard_score, get_leaderboard_entries, get_projected_rank
 from core.sudoku_engine import validate_sudoku_board
 from core.tectonic_engine import validate_tectonic_board
 
@@ -62,6 +62,12 @@ def verify_board():
             result = validate_tectonic_board(user_board, solution)
         else:
             return jsonify({"error": "Unsupported puzzle type"}), 400
+
+        if result.get("completed"):
+            time_seconds = float(data.get("time_seconds", 0))
+            result["projected_rank"] = get_projected_rank(date_key, puzzle_type, time_seconds)
+            result["solution_board"] = solution
+            result["metadata"] = puzzle.get("metadata", {})
 
         return jsonify(result)
     except Exception as e:

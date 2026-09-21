@@ -74,10 +74,16 @@ const el = {
     calDaysGrid: document.getElementById("calendarDaysGrid"),
     btnCalPrev: document.getElementById("btnCalPrev"),
     btnCalNext: document.getElementById("btnCalNext"),
-    // Modal
+    // Status Badge & Victory Modal Elements
+    puzzleInfoBadge: document.getElementById("puzzleInfoBadge"),
     victoryModal: document.getElementById("victoryModal"),
-    modalTimeValue: document.getElementById("modalTimeValue"),
-    modalStatusReport: document.getElementById("modalStatusReport"),
+    victorySubtitle: document.getElementById("victorySubtitle"),
+    victoryDifficultyPill: document.getElementById("victoryDifficultyPill"),
+    victoryDateText: document.getElementById("victoryDateText"),
+    victoryTimeValue: document.getElementById("victoryTimeValue"),
+    victoryRankValue: document.getElementById("victoryRankValue"),
+    victoryBoardContainer: document.getElementById("victoryBoardContainer"),
+    victorySubmitGroup: document.getElementById("victorySubmitGroup"),
     playerNameInput: document.getElementById("playerNameInput"),
     btnSubmitScore: document.getElementById("btnSubmitScore"),
     btnCloseModal: document.getElementById("btnCloseModal")
@@ -179,10 +185,15 @@ function switchToGame(gameType) {
     if (isSudoku) {
         el.sudokuContainer.classList.remove("hidden");
         el.tectonicContainer.classList.add("hidden");
+        if (el.puzzleInfoBadge) el.puzzleInfoBadge.textContent = "Klassisk (9x9)";
         renderNumberPad(9);
     } else {
         el.sudokuContainer.classList.add("hidden");
         el.tectonicContainer.classList.remove("hidden");
+        const gT = state.games.tectonic;
+        const size = gT.gridSize || 6;
+        const diff = gT.difficulty || "Medel";
+        if (el.puzzleInfoBadge) el.puzzleInfoBadge.textContent = `${diff} (${size}x${size})`;
         renderNumberPad(5);
     }
 
@@ -357,11 +368,23 @@ async function loadPuzzle(type, dateStr) {
         }
 
         if (type === "sudoku") {
+            g.difficulty = "Medel";
+            g.gridSize = 9;
             renderSudokuGrid();
+            if (state.activeTab === "sudoku") {
+                if (el.puzzleInfoBadge) el.puzzleInfoBadge.textContent = "Klassisk (9x9)";
+                renderNumberPad(9);
+            }
         } else if (type === "tectonic") {
+            g.gridSize = (data.metadata && data.metadata.grid_size) || (data.initial_board ? data.initial_board.length : 6);
+            g.difficulty = (data.metadata && data.metadata.difficulty) || "Medel";
             g.gridCages = data.metadata.grid_cages;
             g.cages = data.metadata.cages;
             renderTectonicGrid();
+            if (state.activeTab === "tectonic") {
+                if (el.puzzleInfoBadge) el.puzzleInfoBadge.textContent = `${g.difficulty} (${g.gridSize}x${g.gridSize})`;
+                renderNumberPad(5);
+            }
         }
 
         updateTimerDisplay(g.timerSeconds);
@@ -421,16 +444,32 @@ function renderSudokuGrid() {
 }
 
 // -------------------------------------------------------------
-// Grid Rendering: Tectonic (6x6)
+// Grid Rendering: Tectonic (Dynamic 6x6 to 9x9)
 // -------------------------------------------------------------
 function renderTectonicGrid() {
     el.tectonicGrid.innerHTML = "";
     const g = state.games.tectonic;
     const gridCages = g.gridCages;
     const cages = g.cages;
+    const size = g.gridSize || (gridCages ? gridCages.length : 6);
 
-    for (let r = 0; r < 6; r++) {
-        for (let c = 0; c < 6; c++) {
+    // Responsive cell size based on grid dimension
+    let cellSize = 56;
+    if (size === 7) cellSize = 48;
+    else if (size === 8) cellSize = 42;
+    else if (size === 9) cellSize = 38;
+
+    el.tectonicGrid.style.setProperty("--grid-size", size);
+    el.tectonicGrid.style.setProperty("--cell-size", `${cellSize}px`);
+
+    const CAGE_COLORS = [
+        "#EEF6FF", "#FFEBEB", "#FFF0E5", "#FFFDE6", 
+        "#E8F8EA", "#E3F9F6", "#F4ECFB", "#FAF5EB", 
+        "#F1F5F9", "#FEF3C7"
+    ];
+
+    for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
             const cell = document.createElement("div");
             cell.className = "tectonic-cell";
             cell.dataset.row = r;
@@ -438,24 +477,20 @@ function renderTectonicGrid() {
 
             const cid = gridCages[r][c];
 
-            // Cage border styling
+            // Cage borders separating different cages
             if (r === 0 || gridCages[r - 1][c] !== cid) cell.classList.add("cage-border-top");
-            if (r === 5 || gridCages[r + 1][c] !== cid) cell.classList.add("cage-border-bottom");
+            if (r === size - 1 || gridCages[r + 1][c] !== cid) cell.classList.add("cage-border-bottom");
             if (c === 0 || gridCages[r][c - 1] !== cid) cell.classList.add("cage-border-left");
-            if (c === 5 || gridCages[r][c + 1] !== cid) cell.classList.add("cage-border-right");
+            if (c === size - 1 || gridCages[r][c + 1] !== cid) cell.classList.add("cage-border-right");
 
-            // Background tint
-            const cageColors = [
-                "#F8FAFC", "#F1F5F9", "#FEF3C7", "#E0F2FE", 
-                "#ECFDF5", "#FDF2F8", "#F3E8FF", "#FFFBEB"
-            ];
-            cell.style.backgroundColor = cageColors[cid % cageColors.length];
+            // Pastel background tint
+            cell.style.backgroundColor = CAGE_COLORS[cid % CAGE_COLORS.length];
 
-            // Show cage size badge on first cell of cage
-            if (cages[cid] && cages[cid].cells[0][0] === r && cages[cid].cells[0][1] === c) {
+            // Show cage size number in bottom-left corner of every cell
+            if (cages && cages[cid]) {
                 const badge = document.createElement("span");
-                badge.className = "cage-size-badge";
-                badge.textContent = `1-${cages[cid].size}`;
+                badge.className = "cage-size-num";
+                badge.textContent = cages[cid].size;
                 cell.appendChild(badge);
             }
 
@@ -464,21 +499,24 @@ function renderTectonicGrid() {
 
             if (isFixed) {
                 cell.classList.add("fixed");
-                const numSpan = document.createElement("span");
-                numSpan.textContent = val;
-                cell.appendChild(numSpan);
+                const valSpan = document.createElement("span");
+                valSpan.className = "cell-val";
+                valSpan.textContent = val;
+                cell.appendChild(valSpan);
             } else if (val !== 0) {
                 cell.classList.add("user-filled");
-                const numSpan = document.createElement("span");
-                numSpan.textContent = val;
-                cell.appendChild(numSpan);
+                const valSpan = document.createElement("span");
+                valSpan.className = "cell-val";
+                valSpan.textContent = val;
+                cell.appendChild(valSpan);
             } else {
                 // Pencil marks
                 const candKey = `${r},${c}`;
                 if (g.candidates[candKey] && g.candidates[candKey].size > 0) {
                     const cGrid = document.createElement("div");
                     cGrid.className = "candidate-grid";
-                    for (let n = 1; n <= 5; n++) {
+                    const maxC = (cages && cages[cid]) ? cages[cid].size : 5;
+                    for (let n = 1; n <= maxC; n++) {
                         const cNum = document.createElement("div");
                         cNum.className = "candidate-num";
                         if (g.candidates[candKey].has(n)) {
@@ -555,7 +593,7 @@ function handleInputNumber(num) {
 
 function checkIfBoardIsFull(gameType) {
     const g = state.games[gameType];
-    const size = gameType === "sudoku" ? 9 : 6;
+    const size = gameType === "sudoku" ? 9 : (g.gridSize || (g.currentBoard ? g.currentBoard.length : 6));
 
     for (let r = 0; r < size; r++) {
         for (let c = 0; c < size; c++) {
@@ -578,6 +616,7 @@ async function verifyCurrentBoard(gameType, isAutoCheck) {
             body: JSON.stringify({
                 date_key: state.selectedDate,
                 puzzle_type: gameType,
+                time_seconds: g.timerSeconds,
                 board: g.currentBoard
             })
         });
@@ -600,8 +639,9 @@ async function verifyCurrentBoard(gameType, isAutoCheck) {
 
             // Record completion in local history and calendar
             saveCompletion(gameType, state.selectedDate, g.timerSeconds);
+            renderCalendar();
 
-            showVictoryModal(g.timerSeconds);
+            showVictoryModal(gameType, g.timerSeconds, result);
         } else if (!isAutoCheck && result.valid) {
             alert("Alla ifyllda siffror ar korrekta hittills!");
         }
@@ -610,16 +650,126 @@ async function verifyCurrentBoard(gameType, isAutoCheck) {
     }
 }
 
-function showVictoryModal(seconds) {
+function formatSwedishDate(dateStr) {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return dateStr;
+    const day = parseInt(parts[2], 10);
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    const year = parts[0];
+    const swedishMonths = [
+        "januari", "februari", "mars", "april", "maj", "juni",
+        "juli", "augusti", "september", "oktober", "november", "december"
+    ];
+    return `${day} ${swedishMonths[monthIdx] || ""} ${year}`;
+}
+
+function showVictoryModal(gameType, seconds, result) {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
-    el.modalTimeValue.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    const formattedTime = `${m}:${String(s).padStart(2, "0")}`;
 
-    const onTime = (state.selectedDate === TODAY_STR);
-    el.modalStatusReport.textContent = onTime ? "Klar i tid (Gront datum)" : "Klar i efterhand (Gult datum)";
-    el.modalStatusReport.style.color = onTime ? "#059669" : "#D97706";
+    if (el.victoryTimeValue) el.victoryTimeValue.textContent = formattedTime;
+    if (el.victoryRankValue) {
+        el.victoryRankValue.textContent = (result && result.projected_rank) ? `#${result.projected_rank}` : "#1";
+    }
+
+    const gameName = gameType === "sudoku" ? "Sudoku" : "Tectonic";
+    if (el.victorySubtitle) el.victorySubtitle.textContent = `Du klarade dagens ${gameName}`;
+
+    const diff = (result && result.metadata && result.metadata.difficulty) || state.games[gameType].difficulty || "Medel";
+    if (el.victoryDifficultyPill) el.victoryDifficultyPill.textContent = diff;
+    if (el.victoryDateText) el.victoryDateText.textContent = formatSwedishDate(state.selectedDate);
+
+    // Render Solved Board
+    const solution = (result && result.solution_board) || state.games[gameType].currentBoard;
+    renderVictorySolutionBoard(gameType, solution);
 
     el.victoryModal.classList.remove("hidden");
+}
+
+function renderVictorySolutionBoard(gameType, solutionBoard) {
+    if (!el.victoryBoardContainer || !solutionBoard) return;
+    el.victoryBoardContainer.innerHTML = "";
+
+    if (gameType === "tectonic") {
+        const g = state.games.tectonic;
+        const gridCages = g.gridCages;
+        const cages = g.cages;
+        const size = solutionBoard.length;
+
+        let solvedCellSize = 38;
+        if (size === 7) solvedCellSize = 34;
+        else if (size === 8) solvedCellSize = 30;
+        else if (size === 9) solvedCellSize = 26;
+
+        const grid = document.createElement("div");
+        grid.className = "victory-solved-grid";
+        grid.style.gridTemplateColumns = `repeat(${size}, ${solvedCellSize}px)`;
+        grid.style.gridTemplateRows = `repeat(${size}, ${solvedCellSize}px)`;
+        grid.style.setProperty("--solved-cell-size", `${solvedCellSize}px`);
+
+        const CAGE_COLORS = [
+            "#EEF6FF", "#FFEBEB", "#FFF0E5", "#FFFDE6", 
+            "#E8F8EA", "#E3F9F6", "#F4ECFB", "#FAF5EB", 
+            "#F1F5F9", "#FEF3C7"
+        ];
+
+        for (let r = 0; r < size; r++) {
+            for (let c = 0; c < size; c++) {
+                const cell = document.createElement("div");
+                cell.className = "victory-solved-cell";
+                const cid = gridCages[r][c];
+
+                if (r === 0 || gridCages[r - 1][c] !== cid) cell.classList.add("cage-border-top");
+                if (r === size - 1 || gridCages[r + 1][c] !== cid) cell.classList.add("cage-border-bottom");
+                if (c === 0 || gridCages[r][c - 1] !== cid) cell.classList.add("cage-border-left");
+                if (c === size - 1 || gridCages[r][c + 1] !== cid) cell.classList.add("cage-border-right");
+
+                cell.style.backgroundColor = CAGE_COLORS[cid % CAGE_COLORS.length];
+
+                // Bottom-left cage size badge
+                if (cages && cages[cid]) {
+                    const kSpan = document.createElement("span");
+                    kSpan.className = "cage-size-num";
+                    kSpan.style.fontSize = `${Math.max(8, solvedCellSize * 0.22)}px`;
+                    kSpan.textContent = cages[cid].size;
+                    cell.appendChild(kSpan);
+                }
+
+                const numSpan = document.createElement("span");
+                numSpan.textContent = solutionBoard[r][c];
+                numSpan.style.fontSize = `${Math.max(12, solvedCellSize * 0.48)}px`;
+                cell.appendChild(numSpan);
+
+                grid.appendChild(cell);
+            }
+        }
+        el.victoryBoardContainer.appendChild(grid);
+    } else {
+        // Sudoku
+        const size = 9;
+        const solvedCellSize = 28;
+        const grid = document.createElement("div");
+        grid.className = "victory-solved-grid";
+        grid.style.gridTemplateColumns = `repeat(9, ${solvedCellSize}px)`;
+        grid.style.gridTemplateRows = `repeat(9, ${solvedCellSize}px)`;
+        grid.style.setProperty("--solved-cell-size", `${solvedCellSize}px`);
+
+        for (let r = 0; r < size; r++) {
+            for (let c = 0; c < size; c++) {
+                const cell = document.createElement("div");
+                cell.className = "victory-solved-cell";
+                if (c === 2 || c === 5) cell.classList.add("sudoku-border-right");
+                if (r === 2 || r === 5) cell.classList.add("sudoku-border-bottom");
+
+                cell.textContent = solutionBoard[r][c];
+                cell.style.fontSize = "13px";
+                grid.appendChild(cell);
+            }
+        }
+        el.victoryBoardContainer.appendChild(grid);
+    }
 }
 
 async function submitScoreToAPI() {
@@ -777,8 +927,8 @@ function initKeyboardListeners() {
 
 function handleArrowNavigation(key) {
     const isSudoku = state.activeTab === "sudoku";
-    const size = isSudoku ? 9 : 6;
     const g = state.games[state.activeTab];
+    const size = isSudoku ? 9 : (g.gridSize || (g.initialBoard ? g.initialBoard.length : 6));
 
     if (!g.selectedCell) {
         selectCell(state.activeTab, 0, 0);

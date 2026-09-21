@@ -1,53 +1,132 @@
 """
 Tectonic (Suguru) Engine
-Generates polyomino partitioned grids (6x6) with cages of size 2 to 5,
-solves using Minimum Remaining Values (MRV) constraint propagation,
+Generates polyomino partitioned grids between 6x6 and 9x9 with cages of size 2 to 5,
+supports dynamic difficulty levels (Latt, Medel, Svar),
 and validates submitted solutions.
 """
 
 import random
 from collections import defaultdict
 
-# Library of diverse 6x6 polyomino cage partitions
-# Each partition contains 8 cages of sizes 3 to 5 (summing to 36 cells)
-CAGE_TEMPLATES = [
-    # Template 1
-    [
-        [0, 0, 0, 1, 1, 1],
-        [0, 0, 2, 2, 1, 1],
-        [3, 3, 2, 2, 4, 4],
-        [3, 3, 2, 5, 4, 4],
-        [6, 6, 5, 5, 4, 7],
-        [6, 6, 6, 5, 7, 7]
+# Library of verified cage partitions and base solutions
+TECTONIC_TEMPLATES = {
+    6: [
+        {
+            "cages": [
+                [0, 0, 0, 1, 1, 1],
+                [0, 0, 2, 2, 1, 1],
+                [3, 3, 2, 2, 4, 4],
+                [3, 3, 2, 5, 4, 4],
+                [6, 6, 5, 5, 4, 7],
+                [6, 6, 6, 5, 7, 7]
+            ],
+            "solution": [
+                [3, 5, 2, 5, 4, 1],
+                [1, 4, 1, 3, 2, 3],
+                [2, 3, 5, 4, 1, 5],
+                [4, 1, 2, 3, 2, 3],
+                [2, 3, 4, 1, 4, 1],
+                [4, 1, 5, 2, 3, 2]
+            ]
+        },
+        {
+            "cages": [
+                [0, 0, 0, 0, 1, 1],
+                [2, 3, 3, 1, 1, 1],
+                [2, 2, 3, 3, 4, 4],
+                [2, 5, 6, 6, 4, 4],
+                [2, 5, 5, 7, 8, 8],
+                [5, 5, 7, 7, 7, 7]
+            ],
+            "solution": [
+                [1, 4, 3, 2, 1, 2],
+                [5, 2, 1, 5, 4, 3],
+                [1, 3, 4, 3, 1, 2],
+                [2, 5, 1, 2, 4, 3],
+                [4, 3, 4, 5, 1, 2],
+                [1, 2, 1, 2, 3, 4]
+            ]
+        }
     ],
-    # Template 2
-    [
-        [0, 0, 1, 1, 1, 2],
-        [0, 0, 0, 1, 2, 2],
-        [3, 3, 4, 1, 2, 2],
-        [3, 4, 4, 5, 5, 6],
-        [3, 3, 4, 4, 5, 6],
-        [7, 7, 7, 7, 5, 6]
+    7: [
+        {
+            "cages": [
+                [0, 0, 0, 1, 1, 1, 1],
+                [0, 0, 2, 2, 1, 3, 3],
+                [4, 4, 2, 2, 2, 3, 3],
+                [4, 4, 4, 5, 5, 5, 3],
+                [6, 6, 7, 7, 5, 5, 8],
+                [6, 6, 6, 7, 7, 8, 8],
+                [9, 9, 9, 7, 10, 10, 8]
+            ],
+            "solution": [
+                [4, 2, 1, 5, 3, 1, 2],
+                [5, 3, 4, 2, 4, 5, 3],
+                [2, 1, 5, 3, 1, 2, 4],
+                [5, 3, 4, 2, 5, 3, 1],
+                [1, 2, 1, 3, 1, 4, 2],
+                [3, 4, 5, 4, 5, 3, 1],
+                [1, 2, 3, 2, 1, 2, 4]
+            ]
+        }
     ],
-    # Template 3
-    [
-        [0, 0, 0, 0, 1, 1],
-        [2, 2, 0, 1, 1, 1],
-        [2, 3, 3, 4, 4, 4],
-        [2, 2, 3, 3, 4, 4],
-        [5, 5, 3, 6, 6, 7],
-        [5, 5, 5, 6, 6, 7]
+    8: [
+        {
+            "cages": [
+                [0, 0, 0, 1, 1, 1, 2, 2],
+                [0, 0, 3, 3, 1, 1, 2, 2],
+                [4, 4, 3, 3, 3, 5, 5, 2],
+                [4, 4, 4, 6, 6, 5, 5, 5],
+                [7, 7, 7, 6, 6, 6, 8, 8],
+                [7, 7, 9, 9, 9, 10, 8, 8],
+                [11, 11, 11, 9, 9, 10, 10, 8],
+                [11, 11, 12, 12, 12, 12, 10, 10]
+            ],
+            "solution": [
+                [2, 4, 5, 4, 3, 1, 4, 2],
+                [3, 1, 3, 1, 2, 5, 3, 5],
+                [2, 4, 2, 5, 4, 1, 2, 1],
+                [3, 5, 1, 3, 2, 3, 5, 4],
+                [1, 4, 2, 4, 5, 1, 2, 1],
+                [5, 3, 5, 1, 2, 4, 5, 3],
+                [1, 4, 2, 4, 3, 1, 2, 4],
+                [3, 5, 3, 1, 2, 4, 5, 3]
+            ]
+        }
     ],
-    # Template 4
-    [
-        [0, 0, 1, 1, 1, 1],
-        [0, 0, 0, 2, 2, 1],
-        [3, 3, 2, 2, 2, 4],
-        [3, 5, 5, 5, 4, 4],
-        [3, 3, 6, 5, 4, 4],
-        [6, 6, 6, 5, 7, 7]
+    9: [
+        {
+            "cages": [
+                [0, 0, 0, 1, 1, 1, 2, 2, 2],
+                [0, 0, 3, 3, 1, 1, 2, 2, 4],
+                [5, 5, 3, 3, 6, 6, 6, 4, 4],
+                [5, 5, 5, 7, 7, 7, 6, 6, 4],
+                [8, 8, 8, 7, 7, 9, 9, 4, 10],
+                [8, 8, 11, 11, 11, 9, 9, 9, 10],
+                [12, 12, 12, 11, 11, 13, 13, 10, 10],
+                [12, 12, 14, 14, 14, 13, 13, 13, 10],
+                [15, 15, 15, 14, 14, 16, 16, 16, 16]
+            ],
+            "solution": [
+                [1, 4, 2, 5, 2, 4, 2, 5, 4],
+                [3, 5, 3, 1, 3, 1, 3, 1, 3],
+                [4, 1, 4, 2, 4, 2, 5, 4, 5],
+                [5, 2, 3, 1, 5, 3, 1, 3, 1],
+                [3, 1, 5, 2, 4, 2, 5, 2, 5],
+                [4, 2, 4, 1, 5, 3, 4, 1, 4],
+                [1, 3, 5, 3, 2, 1, 2, 3, 2],
+                [2, 4, 1, 4, 5, 3, 5, 4, 1],
+                [1, 3, 2, 3, 2, 4, 1, 2, 3]
+            ]
+        }
     ]
-]
+}
+
+DIFFICULTY_CONFIG = {
+    "Lätt": 0.48,   # ~48% cells given as clues
+    "Medel": 0.36,  # ~36% cells given as clues
+    "Svår": 0.26    # ~26% cells given as clues
+}
 
 def rotate_grid(grid):
     return [list(row) for row in zip(*grid[::-1])]
@@ -55,113 +134,74 @@ def rotate_grid(grid):
 def reflect_grid(grid):
     return [row[::-1] for row in grid]
 
-def get_transformed_template(template_idx, rotation_k, do_reflect):
-    grid = [row[:] for row in CAGE_TEMPLATES[template_idx % len(CAGE_TEMPLATES)]]
-    for _ in range(rotation_k % 4):
-        grid = rotate_grid(grid)
-    if do_reflect:
-        grid = reflect_grid(grid)
+def get_transformed_puzzle(template_dict, rotation_k, do_reflect):
+    cages_grid = [row[:] for row in template_dict["cages"]]
+    sol_grid = [row[:] for row in template_dict["solution"]]
 
-    # Re-normalize cage IDs to be 0..N
+    for _ in range(rotation_k % 4):
+        cages_grid = rotate_grid(cages_grid)
+        sol_grid = rotate_grid(sol_grid)
+
+    if do_reflect:
+        cages_grid = reflect_grid(cages_grid)
+        sol_grid = reflect_grid(sol_grid)
+
+    rows = len(cages_grid)
+    cols = len(cages_grid[0])
+
+    # Re-normalize cage IDs to be 0..M-1
     id_map = {}
-    normalized = []
+    normalized_cages = []
     current_id = 0
-    for r in range(6):
+    for r in range(rows):
         row = []
-        for c in range(6):
-            orig_id = grid[r][c]
+        for c in range(cols):
+            orig_id = cages_grid[r][c]
             if orig_id not in id_map:
                 id_map[orig_id] = current_id
                 current_id += 1
             row.append(id_map[orig_id])
-        normalized.append(row)
+        normalized_cages.append(row)
 
-    return normalized
+    return normalized_cages, sol_grid
 
-def solve_tectonic_mrv(grid_cages, rng):
-    rows, cols = 6, 6
-    cages = defaultdict(list)
-    for r in range(rows):
-        for c in range(cols):
-            cages[grid_cages[r][c]].append((r, c))
-
-    board = [[0 for _ in range(cols)] for _ in range(rows)]
-
-    def is_valid(r, c, val):
-        cid = grid_cages[r][c]
-        if val > len(cages[cid]):
-            return False
-        # Cage uniqueness
-        for cr, cc in cages[cid]:
-            if (cr, cc) != (r, c) and board[cr][cc] == val:
-                return False
-        # 8-direction adjacency
-        for dr in [-1, 0, 1]:
-            for dc in [-1, 0, 1]:
-                if dr == 0 and dc == 0:
-                    continue
-                nr, nc = r + dr, c + dc
-                if 0 <= nr < rows and 0 <= nc < cols:
-                    if board[nr][nc] == val:
-                        return False
-        return True
-
-    def get_candidates(r, c):
-        cid = grid_cages[r][c]
-        size = len(cages[cid])
-        valid_nums = [v for v in range(1, size + 1) if is_valid(r, c, v)]
-        rng.shuffle(valid_nums)
-        return valid_nums
-
-    def search():
-        # Minimum Remaining Values (MRV) heuristic
-        min_cands = None
-        best_cell = None
-        for r in range(rows):
-            for c in range(cols):
-                if board[r][c] == 0:
-                    cands = get_candidates(r, c)
-                    if len(cands) == 0:
-                        return False
-                    if min_cands is None or len(cands) < len(min_cands):
-                        min_cands = cands
-                        best_cell = (r, c)
-        if best_cell is None:
-            return True # Solved
-
-        br, bc = best_cell
-        for val in min_cands:
-            board[br][bc] = val
-            if search():
-                return True
-            board[br][bc] = 0
-        return False
-
-    if search():
-        return board, cages
-    return None, None
-
-def create_daily_tectonic(seed_int, clues=14):
+def create_daily_tectonic(seed_int):
+    """
+    Creates a deterministic daily Tectonic puzzle with randomized size (6x6 to 9x9)
+    and difficulty ('Latt', 'Medel', 'Svar').
+    """
     rng = random.Random(seed_int)
-    template_idx = rng.randint(0, len(CAGE_TEMPLATES) - 1)
+
+    # Randomize size between 6x6 and 9x9
+    size = rng.choice([6, 7, 8, 9])
+
+    # Randomize difficulty
+    difficulty = rng.choice(["Lätt", "Medel", "Svår"])
+    clue_ratio = DIFFICULTY_CONFIG[difficulty]
+
+    templates = TECTONIC_TEMPLATES[size]
+    selected_template = rng.choice(templates)
+
     rotation_k = rng.randint(0, 3)
     do_reflect = rng.choice([True, False])
 
-    grid_cages = get_transformed_template(template_idx, rotation_k, do_reflect)
-    solution, cages = solve_tectonic_mrv(grid_cages, rng)
+    grid_cages, solution = get_transformed_puzzle(selected_template, rotation_k, do_reflect)
 
-    if solution is None:
-        # Fallback to direct first template
-        grid_cages = CAGE_TEMPLATES[0]
-        solution, cages = solve_tectonic_mrv(grid_cages, random.Random(42))
+    total_cells = size * size
+    target_clues = max(int(total_cells * clue_ratio), size * 2)
 
-    puzzle = [row[:] for row in solution]
+    # Collect cage data
+    cages = defaultdict(list)
+    for r in range(size):
+        for c in range(size):
+            cages[grid_cages[r][c]].append([r, c])
 
     # Mask cells deterministically
-    all_cells = [(r, c) for r in range(6) for c in range(6)]
+    puzzle = [row[:] for row in solution]
+    all_cells = [(r, c) for r in range(size) for c in range(size)]
     rng.shuffle(all_cells)
 
-    cells_to_remove = 36 - clues
+    cells_to_remove = total_cells - target_clues
     for r, c in all_cells[:cells_to_remove]:
         puzzle[r][c] = 0
 
@@ -173,19 +213,26 @@ def create_daily_tectonic(seed_int, clues=14):
         }
 
     return {
+        "grid_size": size,
+        "difficulty": difficulty,
+        "clues_count": target_clues,
         "grid_cages": grid_cages,
         "cages": cages_export,
         "initial_board": puzzle,
-        "solution_board": solution,
-        "clues_count": clues
+        "solution_board": solution
     }
 
 def validate_tectonic_board(user_board, solution_board):
+    """
+    Validates user board against solution board dynamically for any grid size.
+    """
     errors = []
     is_complete = True
+    rows = len(solution_board)
+    cols = len(solution_board[0])
 
-    for r in range(6):
-        for c in range(6):
+    for r in range(rows):
+        for c in range(cols):
             val = user_board[r][c]
             if val == 0:
                 is_complete = False

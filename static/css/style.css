@@ -289,6 +289,23 @@ body {
     font-weight: 600;
 }
 
+.status-left-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.puzzle-info-badge {
+    background-color: #EDE9FE;
+    color: #6D28D9;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    letter-spacing: 0.02em;
+    user-select: none;
+}
+
 .timer-display {
     font-size: 1.3rem;
     font-weight: 700;
@@ -415,34 +432,40 @@ body {
     font-weight: 600;
 }
 
-/* Tectonic (Suguru) 6x6 Grid */
+/* Tectonic (Suguru) Dynamic Grid */
 .tectonic-grid {
     display: grid;
-    grid-template-columns: repeat(6, 62px);
-    grid-template-rows: repeat(6, 62px);
-    border: 3px solid var(--border-dark);
+    grid-template-columns: repeat(var(--grid-size, 6), var(--cell-size, 56px));
+    grid-template-rows: repeat(var(--grid-size, 6), var(--cell-size, 56px));
+    border: 3px solid #0F172A;
+    background-color: var(--bg-card);
 }
 
 .tectonic-cell {
-    width: 62px;
-    height: 62px;
+    width: var(--cell-size, 56px);
+    height: var(--cell-size, 56px);
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 1.5rem;
-    font-weight: 700;
     cursor: pointer;
     user-select: none;
     position: relative;
     background-color: var(--bg-card);
     border: 1px dotted #CBD5E1;
+    box-sizing: border-box;
 }
 
-.tectonic-cell.fixed {
+.cell-val {
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.tectonic-cell.fixed .cell-val {
     color: var(--cell-fixed);
 }
 
-.tectonic-cell.user-filled {
+.tectonic-cell.user-filled .cell-val {
     color: var(--cell-user);
 }
 
@@ -452,22 +475,29 @@ body {
 
 .tectonic-cell.error {
     background-color: var(--cell-error) !important;
+}
+
+.tectonic-cell.error .cell-val {
     color: var(--text-error) !important;
 }
 
-/* Cage border classes applied dynamically */
-.tectonic-cell.cage-border-top { border-top: 3px solid var(--border-dark); }
-.tectonic-cell.cage-border-bottom { border-bottom: 3px solid var(--border-dark); }
-.tectonic-cell.cage-border-left { border-left: 3px solid var(--border-dark); }
-.tectonic-cell.cage-border-right { border-right: 3px solid var(--border-dark); }
+/* Cage border classes applied dynamically (separating cages) */
+.tectonic-cell.cage-border-top { border-top: 3px solid #0F172A; }
+.tectonic-cell.cage-border-bottom { border-bottom: 3px solid #0F172A; }
+.tectonic-cell.cage-border-left { border-left: 3px solid #0F172A; }
+.tectonic-cell.cage-border-right { border-right: 3px solid #0F172A; }
 
-.cage-size-badge {
+/* Cage Size in bottom-left corner of every cage cell (as in Testportalen) */
+.cage-size-num {
     position: absolute;
-    top: 2px;
+    bottom: 2px;
     left: 4px;
-    font-size: 0.625rem;
-    font-weight: 700;
-    color: #94A3B8;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #64748B;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
 }
 
 /* Input Controls & Keypad */
@@ -600,52 +630,203 @@ body {
 .rank-2 { color: #64748B; }
 .rank-3 { color: #B45309; }
 
-/* Victory Modal */
+/* Victory Modal (Testportalen Style) */
 .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: rgba(15, 23, 42, 0.6);
+    background-color: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 100;
+    padding: 16px;
+    box-sizing: border-box;
 }
 
-.modal-card {
-    background-color: var(--bg-card);
-    width: 90%;
-    max-width: 400px;
-    padding: 24px;
-    border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+.victory-card-container {
+    background-color: #FFFFFF;
+    width: 100%;
+    max-width: 430px;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    max-height: 92vh;
+    overflow-y: auto;
+    animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.modal-card h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
+@keyframes modalPop {
+    from {
+        opacity: 0;
+        transform: scale(0.94) translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Purple Top Header Banner */
+.victory-header {
+    background: linear-gradient(180deg, #A855F7 0%, #9333EA 100%);
+    padding: 28px 20px 32px 20px;
+    text-align: center;
+    color: #FFFFFF;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.victory-trophy-circle {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.victory-title {
+    font-size: 1.85rem;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin-bottom: 4px;
+    letter-spacing: -0.02em;
+}
+
+.victory-subtitle {
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.92);
     margin-bottom: 12px;
 }
 
-.modal-time-report {
-    font-size: 1rem;
-    margin-bottom: 6px;
+.victory-meta-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.95);
 }
 
-.modal-status-report {
-    font-size: 0.875rem;
-    color: #059669;
-    font-weight: 600;
-    margin-bottom: 16px;
+.victory-pill {
+    background-color: rgba(255, 255, 255, 0.25);
+    padding: 3px 12px;
+    border-radius: 9999px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
 }
 
-.modal-input-group {
-    margin-bottom: 20px;
+/* Floating Stat Cards */
+.victory-stats-row {
+    display: flex;
+    gap: 12px;
+    padding: 0 20px;
+    margin-top: -22px;
+    position: relative;
+    z-index: 2;
 }
 
-.modal-input-group label {
+.victory-stat-card {
+    flex: 1;
+    background: #FFFFFF;
+    border-radius: 14px;
+    padding: 14px 12px;
+    text-align: center;
+    box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.08);
+    border: 1px solid #F1F5F9;
+}
+
+.stat-icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0F172A;
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: #94A3B8;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+}
+
+/* Solved Board Display */
+.victory-solution-section {
+    padding: 18px 20px 8px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.victory-solution-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748B;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.victory-board-wrapper {
+    display: flex;
+    justify-content: center;
+    background: #FFFFFF;
+    padding: 4px;
+    border-radius: 8px;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.victory-solved-grid {
+    display: grid;
+    border: 2.5px solid #0F172A;
+}
+
+.victory-solved-cell {
+    width: var(--solved-cell-size, 40px);
+    height: var(--solved-cell-size, 40px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    position: relative;
+    border: 1px dotted #CBD5E1;
+    box-sizing: border-box;
+    color: #0F172A;
+}
+
+.victory-solved-cell.cage-border-top { border-top: 2.5px solid #0F172A; }
+.victory-solved-cell.cage-border-bottom { border-bottom: 2.5px solid #0F172A; }
+.victory-solved-cell.cage-border-left { border-left: 2.5px solid #0F172A; }
+.victory-solved-cell.cage-border-right { border-right: 2.5px solid #0F172A; }
+
+/* Sudoku 3x3 borders for victory board */
+.victory-solved-cell.sudoku-border-right { border-right: 2px solid #0F172A; }
+.victory-solved-cell.sudoku-border-bottom { border-bottom: 2.5px solid #0F172A; }
+
+/* Actions & Leaderboard submission */
+.victory-actions-area {
+    padding: 16px 20px 24px 20px;
+}
+
+.victory-actions-area label {
     display: block;
     font-size: 0.8125rem;
     font-weight: 600;
@@ -653,18 +834,23 @@ body {
     color: var(--text-muted);
 }
 
-.modal-input-group input {
-    width: 100%;
-    padding: 10px 12px;
+.victory-input-row {
+    display: flex;
+    gap: 8px;
+}
+
+.victory-input-row input {
+    flex: 1;
+    padding: 9px 12px;
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 0.9375rem;
 }
 
-.modal-actions {
+.victory-buttons-row {
     display: flex;
-    gap: 8px;
-    justify-content: flex-end;
+    justify-content: center;
+    margin-top: 12px;
 }
 
 /* Footer */

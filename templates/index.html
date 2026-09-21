@@ -76,9 +76,12 @@
                 <section class="game-section" id="gameSection">
                     <!-- Status Bar -->
                     <div class="status-bar">
-                        <div class="timer-card">
-                            <span class="status-label">Tid:</span>
-                            <span class="timer-display" id="timerDisplay">00:00</span>
+                        <div class="status-left-group">
+                            <div class="timer-card">
+                                <span class="status-label">Tid:</span>
+                                <span class="timer-display" id="timerDisplay">00:00</span>
+                            </div>
+                            <span class="puzzle-info-badge" id="puzzleInfoBadge">Medel</span>
                         </div>
 
                         <div class="action-buttons">
@@ -144,21 +147,73 @@
             </section>
         </main>
 
-        <!-- Completion / Victory Modal -->
+        <!-- Completion / Victory Modal (Inspired by Testportalen) -->
         <div class="modal-overlay hidden" id="victoryModal">
-            <div class="modal-card">
-                <h3>Pusslet är löst!</h3>
-                <p class="modal-time-report">Din sluttid: <strong id="modalTimeValue">00:00</strong></p>
-                <p class="modal-status-report" id="modalStatusReport">Sparat i din kalender</p>
-
-                <div class="modal-input-group">
-                    <label for="playerNameInput">Ditt namn på topplistan:</label>
-                    <input type="text" id="playerNameInput" maxlength="20" placeholder="Skriv ditt alias">
+            <div class="victory-card-container">
+                <!-- Top Purple Banner Header -->
+                <div class="victory-header">
+                    <div class="victory-trophy-circle">
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+                            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+                            <path d="M4 22h16"></path>
+                            <path d="M10 14.66V17c0 .55-.45 1-1 1H7v4h10v-4h-2c-.55 0-1-.45-1-1v-2.34"></path>
+                            <path d="M6 2h12v7a6 6 0 0 1-12 0V2z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="victory-title">Bra jobbat!</h2>
+                    <p class="victory-subtitle" id="victorySubtitle">Du klarade dagens Tectonic</p>
+                    <div class="victory-meta-row">
+                        <span class="victory-pill" id="victoryDifficultyPill">Lätt</span>
+                        <span class="victory-date-text" id="victoryDateText">21 september 2026</span>
+                    </div>
                 </div>
 
-                <div class="modal-actions">
-                    <button class="btn btn-primary" id="btnSubmitScore">Spara till Topplistan</button>
-                    <button class="btn btn-secondary" id="btnCloseModal">Stäng</button>
+                <!-- Floating Stat Cards -->
+                <div class="victory-stats-row">
+                    <div class="victory-stat-card">
+                        <div class="stat-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="victoryTimeValue">1:07</div>
+                        <div class="stat-label">TID</div>
+                    </div>
+
+                    <div class="victory-stat-card">
+                        <div class="stat-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="8" r="7"></circle>
+                                <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="victoryRankValue">#2</div>
+                        <div class="stat-label">PLACERING</div>
+                    </div>
+                </div>
+
+                <!-- Solved Board Display -->
+                <div class="victory-solution-section">
+                    <div class="victory-solution-title">RÄTT LÖSNING</div>
+                    <div class="victory-board-wrapper" id="victoryBoardContainer">
+                        <!-- Populated dynamically with the solved grid -->
+                    </div>
+                </div>
+
+                <!-- Leaderboard Submission & Actions -->
+                <div class="victory-actions-area">
+                    <div class="modal-input-group" id="victorySubmitGroup">
+                        <label for="playerNameInput">Spara ditt resultat till topplistan:</label>
+                        <div class="victory-input-row">
+                            <input type="text" id="playerNameInput" maxlength="20" placeholder="Ditt alias">
+                            <button class="btn btn-primary" id="btnSubmitScore">Spara</button>
+                        </div>
+                    </div>
+                    <div class="victory-buttons-row">
+                        <button class="btn btn-secondary" id="btnCloseModal">Stäng</button>
+                    </div>
                 </div>
             </div>
         </div>

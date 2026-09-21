@@ -5,23 +5,32 @@
 [![Frontend](https://img.shields.io/badge/Frontend-HTML5%20%7C%20CSS3%20%7C%20JavaScript-yellow)](static/)
 [![Inspiration](https://img.shields.io/badge/Format-Testportalen.se%20Inspired-purple)](https://testportalen.se/)
 
-This repository contains a full-stack puzzle platform providing daily seeded Sudoku (9x9) and Tectonic/Suguru (6x6) challenges, featuring independent game timers, an interactive calendar tracking daily completion history, and competitive daily leaderboards inspired by Testportalen.se.
+This repository contains a full-stack logic puzzle platform providing daily seeded Sudoku (9x9) and Tectonic/Suguru (6x6 to 9x9) challenges, featuring independent game timers, an interactive calendar tracking completion history, Testportalen-style board styling with bottom-left cage sizes, and a completion screen with solution review and daily leaderboards.
 
-Built as a software engineering passion project focusing on constraint satisfaction problems, polyomino partitioning, REST API design, and client-side state handling.
+Built as a software engineering portfolio project focusing on constraint satisfaction, polyomino partitioning, REST API architecture, and client-side state synchronization.
 
 ---
 
 ## Overview
 
-The platform serves two daily logic puzzles based on the calendar date:
-1. **Sudoku (9x9):** Standard Latin square puzzle with row, column, and 3x3 subgrid uniqueness constraints.
-2. **Tectonic / Suguru (6x6):** Grid partitioned into contiguous polyomino cages of sizes 3 to 5. Each cage of size N contains digits 1 to N without duplicate values. In accordance with Suguru rules, no two identical digits may touch in any of the 8 surrounding cardinal or diagonal directions (`max(|dr|, |dc|) <= 1`).
-3. **Daily Seeding:** Puzzles are deterministically generated from SHA-256 date hashes, ensuring all players globally receive identical daily boards.
-4. **Independent Game States & Timers:** Sudoku and Tectonic maintain fully independent timers and board states. Switching tabs pauses the outgoing game timer and resumes the incoming timer.
-5. **Interactive Calendar History:** A calendar interface tracks completion status per date and per game type:
-   - Green badge (Klar i tid): Puzzle completed on its scheduled date.
-   - Yellow badge (Klar i efterhand): Puzzle completed retroactively for past dates.
-   - Highlights active date selection with blue ring and persists completion status via `localStorage`.
+The application delivers deterministic daily challenges based on calendar dates:
+1. **Sudoku (9x9):** Classical Latin square logic puzzle with row, column, and 3x3 block uniqueness constraints.
+2. **Tectonic / Suguru (Dynamic 6x6 to 9x9):**
+   - Grids vary day-to-day between 6x6, 7x7, 8x8, and 9x9.
+   - Rotates through three difficulty tiers: `Lätt` (~48% clues), `Medel` (~36% clues), and `Svår` (~26% clues).
+   - Each cell displays its cage capacity in the bottom-left corner (`cage-size-num`), replacing top-corner badges.
+   - Polyomino cages contain digits from 1 to N with no duplicates, adhering strictly to 8-direction Chebyshev adjacency rules (`max(|dr|, |dc|) <= 1`).
+3. **Deterministic Seeding:** SHA-256 date hashing guarantees consistent boards for all players on any given date.
+4. **Independent Game States & Timers:** Sudoku and Tectonic operate on isolated stopwatches and board caches. Switching tabs automatically pauses the inactive puzzle and resumes the active one.
+5. **Interactive Calendar History:** Tracks completion status per puzzle type:
+   - Green indicator (`status-ontime`): Solved on the scheduled challenge date.
+   - Yellow indicator (`status-retro`): Solved retroactively for past calendar dates.
+   - Local state persists across sessions via `localStorage`.
+6. **Victory & Solution Review Screen:**
+   - Purple header card with achievement trophy, difficulty tier pill, and Swedish date formatting (`21 september 2026`).
+   - Side-by-side metric cards displaying official time (`TID`) and leaderboard placement (`PLACERING`).
+   - `RÄTT LÖSNING` section rendering the solved board with pastel cage tints and cage borders.
+   - Inline score submission to the SQLite daily leaderboard.
 
 ---
 
@@ -30,16 +39,16 @@ The platform serves two daily logic puzzles based on the calendar date:
 ```mermaid
 flowchart LR
     subgraph Client ["Frontend (Vanilla JS & CSS3)"]
-        UI[Grid Rendering & Keypad Controls]
+        UI[Dynamic Grid Rendering & Controls]
         Cal[Monthly Calendar Widget & Status Badges]
         Timer[Independent Game Timers]
-        Notes[Candidate Pencil Marks]
+        Modal[Victory Modal & Solution Review]
     end
 
     subgraph Server ["Backend (Python & Flask)"]
         API[REST Routing & Verification Endpoint]
-        S_Engine[Sudoku Solver & Masking]
-        T_Engine[Tectonic MRV Solver & Partitioner]
+        S_Engine[Sudoku Solver & Clue Masking]
+        T_Engine[Tectonic Engine & Multi-Size Templates]
         Seed[Deterministic Date Seed Generator]
     end
 
@@ -57,7 +66,7 @@ flowchart LR
     API --> DB_L
     Cal --> LS
     Timer --> UI
-    Notes --> UI
+    API -->|Solution & Rank| Modal
 ```
 
 ---
@@ -65,65 +74,106 @@ flowchart LR
 ## Game Engine Mechanics
 
 ### 1. Sudoku Engine (`core/sudoku_engine.py`)
-* Generation: Employs randomized backtracking seeded with `YYYY-MM-DD:sudoku`. Diagonal 3x3 blocks are generated independently, followed by recursive constraint propagation to complete the Latin square.
-* Masking: Cells are removed deterministically down to 33 clues for daily balance.
-* Verification: Server validates row, column, and block uniqueness before accepting submissions.
+- Generation: Backtracking algorithm seeded with `YYYY-MM-DD:sudoku`. 3x3 diagonal blocks are populated first, followed by recursive constraint propagation.
+- Clue Masking: Reduces cells deterministically to 33 clues for standard daily difficulty.
+- Validation: Validates row, column, and subgrid uniqueness constraints server-side.
 
 ### 2. Tectonic / Suguru Engine (`core/tectonic_engine.py`)
-* Partitioning: 36 cells are segmented into 8 polyomino cages of sizes 3 to 5 ($4 \times 5 + 4 \times 4$ or equivalent combinations).
-* Solver: Implements a Minimum Remaining Values (MRV) heuristic with 8-directional Chebyshev distance checking. Cells with the fewest legal digit candidates are prioritized to eliminate deep backtracking dead ends.
-* Clues: Masks 22 cells, providing 14 initial numbers for the daily challenge.
+- Grid Partitioning: Polyomino cage library covering 6x6 (36 cells), 7x7 (49 cells), 8x8 (64 cells), and 9x9 (81 cells) layouts with cage sizes ranging from 2 to 5 cells.
+- Dynamic Difficulty:
+  - `Lätt`: ~48% initial clues.
+  - `Medel`: ~36% initial clues.
+  - `Svår`: ~26% initial clues.
+- Geometric Invariance: Applies dihedral group transformations (rotations by 90, 180, 270 degrees and horizontal/vertical reflections) to expand board diversity while preserving validity.
+- Cell Representation: Each cell includes a small cage size indicator in its bottom-left corner and a centralized user input area.
 
 ---
 
 ## REST API Specification
 
 ### 1. Get Daily Puzzle
-* **Endpoint:** `GET /api/puzzle?type={sudoku|tectonic}&date={YYYY-MM-DD}`
-* **Response:**
+- **Endpoint:** `GET /api/puzzle?type={sudoku|tectonic}&date={YYYY-MM-DD}`
+- **Response:**
 ```json
 {
   "puzzle_id": 1,
   "date_key": "2026-09-21",
-  "puzzle_type": "sudoku",
-  "initial_board": [[0, 0, 3, ...], ...],
-  "metadata": { "clues_count": 33 }
+  "puzzle_type": "tectonic",
+  "initial_board": [[0, 2, 0, ...], ...],
+  "metadata": {
+    "grid_size": 7,
+    "difficulty": "Medel",
+    "clues_count": 17,
+    "grid_cages": [[0, 0, 1, ...], ...],
+    "cages": {
+      "0": { "size": 5, "cells": [[0, 0], [0, 1], ...] }
+    }
+  }
 }
 ```
-*Note: Solutions are excluded from client payloads to prevent client-side inspection.*
 
 ### 2. Verify Board State
-* **Endpoint:** `POST /api/verify`
-* **Payload:** `{ "date_key": "2026-09-21", "puzzle_type": "sudoku", "board": [[...]] }`
-* **Response:** `{ "valid": true, "completed": false, "errors": [] }`
-
-### 3. Submit Score
-* **Endpoint:** `POST /api/submit-score`
-* **Payload:**
+- **Endpoint:** `POST /api/verify`
+- **Payload:**
 ```json
 {
   "date_key": "2026-09-21",
-  "puzzle_type": "sudoku",
-  "player_name": "Solver_99",
-  "time_seconds": 184.5,
+  "puzzle_type": "tectonic",
+  "time_seconds": 67.0,
   "board": [[...]]
 }
 ```
-* **Response:** `{ "success": true, "entry": { "rank": 1, "player_name": "Solver_99", "time_seconds": 184.5 } }`
+- **Response (In Progress):** `{ "valid": true, "completed": false, "errors": [] }`
+- **Response (Completed):**
+```json
+{
+  "valid": true,
+  "completed": true,
+  "errors": [],
+  "projected_rank": 2,
+  "solution_board": [[...]],
+  "metadata": { "difficulty": "Lätt", "grid_size": 7 }
+}
+```
+
+### 3. Submit Score
+- **Endpoint:** `POST /api/submit-score`
+- **Payload:**
+```json
+{
+  "date_key": "2026-09-21",
+  "puzzle_type": "tectonic",
+  "player_name": "Solver_99",
+  "time_seconds": 67.0,
+  "board": [[...]]
+}
+```
+- **Response:**
+```json
+{
+  "success": true,
+  "entry": {
+    "entry_id": 12,
+    "rank": 2,
+    "player_name": "Solver_99",
+    "time_seconds": 67.0
+  }
+}
+```
 
 ### 4. Fetch Leaderboard
-* **Endpoint:** `GET /api/leaderboard?type={sudoku|tectonic}&date={YYYY-MM-DD}`
-* **Response:** Sorted by `completion_time_seconds ASC`.
+- **Endpoint:** `GET /api/leaderboard?type={sudoku|tectonic}&date={YYYY-MM-DD}`
+- **Response:** Sorted list of entries with rank, player name, formatted time, and timestamp.
 
 ---
 
 ## Client Controls
 
-* **Cell Selection:** Mouse click or Arrow Keys (`Up`, `Down`, `Left`, `Right`).
-* **Digit Input:** Keyboard numbers `1`–`9` (Sudoku) or `1`–`5` (Tectonic), or on-screen keypad.
-* **Erase / Clear:** `Backspace`, `Delete`, or `0`.
-* **Pencil Mode Toggle:** Press `P` or toggle the Pen / Pencil button to record mini candidate notes in cells.
-* **Calendar Selection:** Click any past or current calendar day to load that specific puzzle date.
+- **Cell Selection:** Mouse click or Arrow Keys (`Up`, `Down`, `Left`, `Right`).
+- **Digit Input:** Keyboard numbers `1`–`9` (Sudoku) or `1`–`5` (Tectonic), or on-screen keypad.
+- **Erase / Clear:** `Backspace`, `Delete`, or `0`.
+- **Pencil Mode Toggle:** Press `P` or toggle the Pen / Pencil button to record mini candidate notes in cells.
+- **Calendar Selection:** Click any past or current calendar day to load that specific puzzle date.
 
 ---
 
@@ -139,24 +189,24 @@ daily-logic-puzzles/
 │
 ├── core/
 │   ├── sudoku_engine.py           # Sudoku generator, solver, and validator
-│   ├── tectonic_engine.py         # Tectonic Suguru MRV solver and cage partitioner
+│   ├── tectonic_engine.py         # Multi-size Tectonic engine, difficulties, and transformations
 │   └── daily_seed.py              # SHA-256 deterministic date seed generator
 │
 ├── database/
-│   ├── db.py                      # SQLite database interface and queries
+│   ├── db.py                      # SQLite database interface, ranking, and queries
 │   └── schema.sql                 # Table definitions and index setup
 │
 ├── static/
 │   ├── css/
-│   │   └── style.css              # Nordic minimalist layout, calendar widget, and board styles
+│   │   └── style.css              # Testportalen-inspired layout, victory modal, and board styles
 │   └── js/
-│       └── app.js                 # State manager, calendar widget, timer controller
+│       └── app.js                 # Independent state controller, victory modal, calendar widget
 │
 ├── templates/
-│   └── index.html                 # Single-page interface layout
+│   └── index.html                 # Single-page interface layout and victory modal
 │
 └── tests/
-    └── test_engines.py            # Automated test suite for engines and database
+    └── test_engines.py            # Automated test suite for multi-size engines and database
 ```
 
 ---
@@ -186,4 +236,4 @@ Navigate to `http://127.0.0.1:5000` in any web browser to play.
 
 ## Author
 
-* GitHub: [kallt](https://github.com/kallt)
+- GitHub: [kallt](https://github.com/kallt)

@@ -55,10 +55,16 @@ def get_or_create_daily_puzzle(date_key, puzzle_type):
     seed = generate_daily_seed(date_key, puzzle_type)
     if puzzle_type == "sudoku":
         generated = create_daily_sudoku(seed)
-        metadata = {"clues_count": generated["clues_count"]}
+        metadata = {
+            "grid_size": 9,
+            "difficulty": "Medel",
+            "clues_count": generated["clues_count"]
+        }
     elif puzzle_type == "tectonic":
         generated = create_daily_tectonic(seed)
         metadata = {
+            "grid_size": generated["grid_size"],
+            "difficulty": generated["difficulty"],
             "grid_cages": generated["grid_cages"],
             "cages": generated["cages"],
             "clues_count": generated["clues_count"]
@@ -119,6 +125,19 @@ def submit_leaderboard_score(date_key, puzzle_type, player_name, time_seconds):
         "player_name": clean_name,
         "time_seconds": time_seconds
     }
+
+def get_projected_rank(date_key, puzzle_type, time_seconds):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*) + 1 AS rank_pos
+        FROM leaderboard_entries
+        WHERE date_key = ? AND puzzle_type = ?
+          AND completion_time_seconds < ?
+    """, (date_key, puzzle_type, time_seconds))
+    rank_pos = cursor.fetchone()["rank_pos"]
+    conn.close()
+    return rank_pos
 
 def get_leaderboard_entries(date_key, puzzle_type, limit=25):
     conn = get_connection()
