@@ -28,7 +28,6 @@ def get_puzzle():
 
     try:
         puzzle = get_or_create_daily_puzzle(date_key, puzzle_type)
-        # Exclude solution from JSON payload to prevent client-side inspection
         response_data = {
             "puzzle_id": puzzle["puzzle_id"],
             "date_key": puzzle["date_key"],
@@ -78,8 +77,6 @@ def submit_score():
     puzzle_type = data.get("puzzle_type", "sudoku").lower()
     player_name = data.get("player_name", "Anonymous Solver")
     time_seconds = float(data.get("time_seconds", 0))
-    is_clean_solve = bool(data.get("is_clean_solve", True))
-    hints_used = int(data.get("hints_used", 0))
     user_board = data.get("board")
 
     if not date_key or not user_board:
@@ -102,7 +99,7 @@ def submit_score():
 
         # Save to database
         entry = submit_leaderboard_score(
-            date_key, puzzle_type, player_name, time_seconds, is_clean_solve, hints_used
+            date_key, puzzle_type, player_name, time_seconds
         )
 
         return jsonify({

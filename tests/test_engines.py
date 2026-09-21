@@ -1,7 +1,6 @@
-"""
-Test Suite: Daily Logic Puzzles
-Validates board generators, constraint propagation, SQLite database caching, and leaderboard scoring.
-"""
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from database.db import init_db, get_or_create_daily_puzzle, submit_leaderboard_score, get_leaderboard_entries
 from core.sudoku_engine import validate_sudoku_board
@@ -23,13 +22,13 @@ def test_engines():
     assert val_tectonic["completed"] is True
 
     # Test Leaderboard
-    submit_leaderboard_score("2026-09-21", "sudoku", "Alice", 185.2, is_clean_solve=True)
-    submit_leaderboard_score("2026-09-21", "sudoku", "Bob", 210.0, is_clean_solve=True)
+    submit_leaderboard_score("2026-09-21", "sudoku", "Alice", 185.2)
+    submit_leaderboard_score("2026-09-21", "sudoku", "Bob", 210.0)
     lb = get_leaderboard_entries("2026-09-21", "sudoku")
     assert len(lb) >= 2
     assert lb[0]["player_name"] == "Alice"
 
-    print("All tests passed.")
+    print("All engine and database tests passed.")
 
 if __name__ == "__main__":
     test_engines()

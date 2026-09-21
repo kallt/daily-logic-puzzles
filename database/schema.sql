@@ -17,10 +17,8 @@ CREATE TABLE IF NOT EXISTS leaderboard_entries (
     puzzle_type TEXT NOT NULL,          -- 'sudoku' or 'tectonic'
     player_name TEXT NOT NULL,
     completion_time_seconds REAL NOT NULL,
-    is_clean_solve INTEGER NOT NULL,    -- 1 = Clean solve (no hints/error checks), 0 = Assisted
-    hints_used INTEGER DEFAULT 0,
     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_leaderboard_query 
-ON leaderboard_entries (date_key, puzzle_type, is_clean_solve, completion_time_seconds ASC);
+ON leaderboard_entries (date_key, puzzle_type, completion_time_seconds ASC);

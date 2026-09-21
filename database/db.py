@@ -46,12 +46,12 @@ def get_or_create_daily_puzzle(date_key, puzzle_type):
             "puzzle_type": row["puzzle_type"],
             "initial_board": json.loads(row["initial_board_json"]),
             "metadata": json.loads(row["metadata_json"]) if row["metadata_json"] else {},
-            "_solution": json.loads(row["solution_board_json"]) # internal use only
+            "_solution": json.loads(row["solution_board_json"])
         }
         conn.close()
         return puzzle
 
-    # Generate new puzzle
+    # Generate new deterministic daily puzzle
     seed = generate_daily_seed(date_key, puzzle_type)
     if puzzle_type == "sudoku":
         generated = create_daily_sudoku(seed)
@@ -90,28 +90,26 @@ def get_or_create_daily_puzzle(date_key, puzzle_type):
         "_solution": generated["solution_board"]
     }
 
-def submit_leaderboard_score(date_key, puzzle_type, player_name, time_seconds, is_clean_solve, hints_used=0):
+def submit_leaderboard_score(date_key, puzzle_type, player_name, time_seconds):
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Sanitize player name
     clean_name = player_name.strip()[:24] if player_name and player_name.strip() else "Anonymous Solver"
 
     cursor.execute("""
         INSERT INTO leaderboard_entries 
-        (date_key, puzzle_type, player_name, completion_time_seconds, is_clean_solve, hints_used)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (date_key, puzzle_type, clean_name, time_seconds, 1 if is_clean_solve else 0, hints_used))
+        (date_key, puzzle_type, player_name, completion_time_seconds)
+        VALUES (?, ?, ?, ?)
+    """, (date_key, puzzle_type, clean_name, time_seconds))
     conn.commit()
     entry_id = cursor.lastrowid
 
-    # Compute rank for this entry among clean solves (if clean) or overall
     cursor.execute("""
         SELECT COUNT(*) + 1 AS rank_pos
         FROM leaderboard_entries
-        WHERE date_key = ? AND puzzle_type = ? AND is_clean_solve = ?
+        WHERE date_key = ? AND puzzle_type = ?
           AND completion_time_seconds < ?
-    """, (date_key, puzzle_type, 1 if is_clean_solve else 0, time_seconds))
+    """, (date_key, puzzle_type, time_seconds))
     rank_pos = cursor.fetchone()["rank_pos"]
 
     conn.close()
@@ -119,8 +117,7 @@ def submit_leaderboard_score(date_key, puzzle_type, player_name, time_seconds, i
         "entry_id": entry_id,
         "rank": rank_pos,
         "player_name": clean_name,
-        "time_seconds": time_seconds,
-        "is_clean_solve": is_clean_solve
+        "time_seconds": time_seconds
     }
 
 def get_leaderboard_entries(date_key, puzzle_type, limit=25):
@@ -129,10 +126,10 @@ def get_leaderboard_entries(date_key, puzzle_type, limit=25):
 
     cursor.execute("""
         SELECT 
-            entry_id, player_name, completion_time_seconds, is_clean_solve, hints_used, submitted_at
+            entry_id, player_name, completion_time_seconds, submitted_at
         FROM leaderboard_entries
         WHERE date_key = ? AND puzzle_type = ?
-        ORDER BY is_clean_solve DESC, completion_time_seconds ASC
+        ORDER BY completion_time_seconds ASC
         LIMIT ?
     """, (date_key, puzzle_type, limit))
     rows = cursor.fetchall()
@@ -150,8 +147,6 @@ def get_leaderboard_entries(date_key, puzzle_type, limit=25):
             "player_name": row["player_name"],
             "time_seconds": secs,
             "formatted_time": formatted_time,
-            "is_clean_solve": bool(row["is_clean_solve"]),
-            "hints_used": row["hints_used"],
             "submitted_at": row["submitted_at"]
         })
 
