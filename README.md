@@ -2,6 +2,8 @@
 
 I built this hobby project because I really enjoy solving logic puzzles in my spare time (especially daily ones on sites like Testportalen.se). I wanted to see if I could make my own browser-based version from scratch, with seeded daily puzzles, calendar streak tracking, and local leaderboards.
 
+![Daily Logic Puzzles](docs/screenshot.png)
+
 ---
 
 ## What is this?
@@ -9,7 +11,7 @@ I built this hobby project because I really enjoy solving logic puzzles in my sp
 A web application that generates a new logic challenge every day:
 
 - **Daily Sudoku (9x9):** The classic number-placement puzzle with rows, columns, and 3x3 boxes.
-- **Daily Tectonic (Suguru):** A polyomino grid puzzle that randomly rotates between different grid sizes (6x6, 7x7, 8x8, and 9x9) and difficulty levels (Easy, Medium, and Hard). Each square displays the size of its block in the bottom-left corner.
+- **Daily Tectonic:** A polyomino grid puzzle that randomly rotates between different grid sizes (6x6, 7x7, 8x8, and 9x9) and difficulty levels (Easy, Medium, and Hard). Each square displays the size of its block in the bottom-left corner.
 - **Calendar Progress:** An interactive calendar tracking your finished puzzles. Solving a puzzle on the day it releases marks it green, while finishing past puzzles marks them yellow. Puzzles can be played back to July 2026, while future dates stay locked until their release day.
 - **Separate Timers:** Switching between Sudoku and Tectonic pauses the timer on the inactive game, so times are kept completely independent.
 - **Quality-of-life Controls:** Clicking or typing the same number in a filled cell toggles it back to empty. Arrow keys navigate the board, and pressing 'P' switches between pen and pencil note mode.
@@ -17,7 +19,7 @@ A web application that generates a new logic challenge every day:
 
 ---
 
-## How to Play Tectonic (Suguru)
+## How to Play Tectonic
 
 If you haven't played Tectonic before, the rules are straightforward:
 

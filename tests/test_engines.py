@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from database.db import init_db, get_or_create_daily_puzzle, submit_leaderboard_score, get_leaderboard_entries, get_projected_rank
+from database.db import init_db, get_connection, get_or_create_daily_puzzle, submit_leaderboard_score, get_leaderboard_entries, get_projected_rank
 from core.sudoku_engine import create_daily_sudoku, validate_sudoku_board
 from core.tectonic_engine import create_daily_tectonic, validate_tectonic_board
 
@@ -52,6 +52,11 @@ def test_engines():
 
     # 4. Test Leaderboard and Projected Rank
     test_date = "2099-01-01"
+    conn = get_connection()
+    conn.execute("DELETE FROM leaderboard_entries WHERE date_key = ?", (test_date,))
+    conn.commit()
+    conn.close()
+
     submit_leaderboard_score(test_date, "tectonic", "Player1", 95.0)
     submit_leaderboard_score(test_date, "tectonic", "Player2", 140.0)
 
